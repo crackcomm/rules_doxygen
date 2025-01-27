@@ -51,9 +51,11 @@ def _doxygen_impl(ctx):
     output_group_info = {"doxygen_config": depset([config])}
     args = ctx.actions.args()
 
+    target = ctx.attr.target[0]
+
     args.add("--config", config)
     args.add("--base_config", ctx.file.config)
-    args.add("--project_name", ctx.attr.project_name if ctx.attr.project_name else ctx.attr.target.label.name)
+    args.add("--project_name", ctx.attr.project_name if ctx.attr.project_name else target.label.name)
 
     output = ctx.attr.output
     if output == "html":
@@ -96,16 +98,21 @@ def _doxygen_impl(ctx):
 
     args.add("--doxygen", doxygen_toolchain.doxygen)
 
-    target = ctx.attr.target
-    inputs_info = target[DoxygenInputsInfo]
+    targets = ctx.attr.target
+    sources = []
+    for target in targets:
+        inputs_info = target[DoxygenInputsInfo]
+        sources.extend(inputs_info.srcs.to_list())
+
+    sources = depset(sources)
 
     args.add("--inputs")
     inputs_args = ctx.actions.args().use_param_file("%s", use_always = True)
-    inputs_args.add_all(inputs_info.srcs)
+    inputs_args.add_all(sources)
 
     ctx.actions.run(
         outputs = outputs + [config],
-        inputs = depset([ctx.file.config] + ctx.files.data, transitive = [inputs_info.srcs]),
+        inputs = depset([ctx.file.config] + ctx.files.data, transitive = [sources]),
         executable = ctx.executable._runner,
         mnemonic = "Doxygen",
         tools = depset([doxygen_toolchain.all_files]),
@@ -150,7 +157,7 @@ doxygen = rule(
         "project_name": attr.string(
             doc = "An optional project name to use. If unset, the label name of `target` will be used.",
         ),
-        "target": attr.label(
+        "target": attr.label_list(
             doc = "The C/C++ target to generate documentation for",
             providers = [CcInfo],
             mandatory = True,
