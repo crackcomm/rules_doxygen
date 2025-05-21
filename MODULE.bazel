@@ -1,0 +1,16 @@
+module(
+    name = "rules_doxygen",
+    version = "0.0.1",
+)
+
+bazel_dep(name = "bazel_skylib", version = "1.7.1")
+bazel_dep(name = "rules_cc", version = "0.1.1")
+bazel_dep(name = "platforms", version = "0.0.11")
+
+toolchains = use_extension("//doxygen:extensions.bzl", "toolchains")
+use_repo(toolchains, "doxygen_linux_amd64")
+use_repo(toolchains, "doxygen_windows_amd64")
+use_repo(toolchains, "doxygen_macos_arm64")
+use_repo(toolchains, "doxygen_macos_amd64")
+
+register_toolchains("//doxygen/private/toolchains:doxygen_toolchain")
